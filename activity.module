@@ -1,0 +1,420 @@
+<?php
+// $Id:$
+
+/**
+ * Implementation of hook_help().
+ */
+function activity_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#activity':
+      $output .= '<p>'. t('For more information, see the online handbook entry for <a href="@activity">Activity module</a>.', array('@activity' => 'http://drupal.org/handbook/modules/activity/')) .'</p>';
+      return $output;
+    case 'admin/settings/activity':
+      $output = '<p>'. t('Please read the developer documentation in the DEVELOPER.txt or in the <a href="@activity">handbook entry</a>.', array('@activity' => 'http://drupal.org/handbook/activity/developer')) .'</p>';
+      return $output;
+    case 'admin/settings/activity/tokens':
+      $output = '<p>'. t('Here is a list of tokens you can use for crafting your activity messages. They\'re split out into the tokens available from other modules, and the ones that are provided by activity module which are more specific to our needs. Feel free to use any you like.') .'</p>';
+      $output .= '<p>'. t('<strong>Comments</strong>:<br />A couple notes on using the comments tokens; You must remember that a comment always has a node it is attached to, but only sometimes has a parent. Therefore it is important to understand that difference in the tokens [parent-...] and [parent-node-...]. If you use any of the tokens that are simply [parent-...] you will sometimes reference the node, but will sometimes reference another comment, since either can be the parent. However, the [parent-node-...] tokens will <em>always</em> reference the actual node that the comment is part of. So for instance, you might craft a message to say, "[user-name] also commented on [parent-node-title-link]." and this would always reference the node that was comment on. You might also say "[user-name] responded to [parent-title-link]." and this would give you the subject line of whatever other comment this activity was in response to.') .'</p>';
+      return $output;
+    case 'admin/settings/actions/configure':
+      return '<p>'. t('INSERT HELP HERE') .'</p>';
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function activity_menu() {
+  $items = array();
+  //$items['admin/settings/activity'] = array();
+  $items['admin/settings/activity/tokens'] = array(
+    'title' => 'Activity | Available tokens',
+    'description' => 'Provides a nice hlep page to find appropriate tokens for your activity messages',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_tokens_inject'),
+    'access callback' => TRUE,
+  );
+  $items['user/%user/activity/settings'] = array(
+    'title' => 'Feed settings',
+    'description' => 'Modify your feed settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('activity_user_settings', 1),
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+/**
+ * Menu callback. Provides checkboxes for a users activity feed.
+ */
+function activity_user_settings(&$form_state, $account) {
+  foreach (array_merge(array('activity'), module_implements('activity_access_grants')) as $module) {
+    $values = module_invoke($module, 'activity_access_grants', $account);
+    if (!empty($values)) {
+      foreach ($values as $value) {
+        $options[$value] = t('Flag_friend_id  ' . $value);
+      }
+      $form[$module] = array(
+        '#type' => 'fieldset',
+        '#title' => $module,
+        '#tree' => TRUE,
+      );
+      $form[$module]['activity_ignore'] = array(
+        '#type' => 'checkboxes',
+        '#title' => t('Select the Activies you would like removed from your feed'),
+        '#default_value' => isset($account->activity_ignore[$module]) ? $account->activity_ignore[$module] : array(),
+        '#options' => $options,
+      );
+    }
+  }
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+  $form['#account'] = $account;
+  return $form;
+}
+
+/**
+ * Settings form submit handler.
+ */
+function activity_user_settings_submit($form, &$form_state) {
+  $ignore = $form['#account']->activity_ignore;
+  foreach (module_implements('activity_access_grants') as $module) {
+    $data = $form_state['values'][$module];
+    // if the field is a module ignore field
+    if (!empty($data['activity_ignore'])) {
+      foreach ($data['activity_ignore'] as $value => $selected) {
+        if ($ignore[$module][$value] != $selected) {
+          if ($selected != 0) {
+            $ignore[$module][$value] = $selected;
+          }
+          else {
+            unset($ignore[$module][$value]);
+          }
+        }
+      }
+    }
+  }
+  user_save($form['#account'], array('activity_ignore' => $ignore));
+}
+
+/**
+ * Implementation of hook_action_info().
+ *
+ * Other modules can provide the necessary hooks that they want to provide to
+ * us. For instance, node.activity.inc will return array(
+ *   'nodeapi' => array('presave', 'delete', 'insert', 'update', 'view')
+ * );
+ *
+ * @see activity_record_form()
+ * @see activity_record_submit()
+ * @see activity_record()
+ */
+function activity_action_info() {
+  $module_info = module_invoke_all('activity_info');
+  foreach ($module_info as $module => $info) {
+    static $hooks = array();
+    $hooks = array_merge($hooks, $info->hooks);
+  }
+  return array(
+    'activity_record' => array(
+      'description' => t('Record an activity'),
+      'type' => 'activity',
+      'configurable' => TRUE,
+      'hooks' => $hooks,
+    ),
+  );
+}
+
+/**
+ * Present a configuration form for our action.
+ *
+ * @param array $context
+ *   Passed in from actions.
+ * @return array $form
+ */
+function activity_record_form($context) {
+  // @todo: provide some advanced help here @see hook_help()
+  
+  // Set default values for form.
+  $context['author-pattern'] = (!isset($context['author-pattern'])) ? '' : $context['author-pattern'];
+  $context['everyone-pattern']   = (!isset($context['everyone-pattern'])) ? '' : $context['everyone-pattern'];
+  
+  $form['token-help'] = array(
+    '#type' => 'markup',
+    '#value' => t('You can use tokens here like [node-link], [comment-link], and [user-name] or !help for a more comprehensive list of tokens.', array('!help' => l('see the detailed help page', 'admin/settings/activity/tokens', array('class' => 'popups')))),
+  );
+  $form['author-pattern'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Author message'),
+    '#default_value' => $context['author-pattern'],
+    '#maxlength' => '254',
+    '#description' => t('Using the available tokens, enter a message as how it should <strong>appear to the Author</strong> of this particular activity.'),
+  );
+  $form['everyone-pattern'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Public message'),
+    '#default_value' => $context['everyone-pattern'],
+    '#maxlength' => '254',
+    '#description' => t('Using the available tokens, enter a message as how it should <strong>appear to anyone who is <em>not</em> the author</strong> of this particular activity.'),
+  );
+  return $form;
+}
+
+/**
+ * Process activity_record form submissions.
+ *
+ * @param array $form
+ * @param array $form_state
+ * @return array $params
+ */
+function activity_record_submit($form, $form_state) {
+  $form_values = $form_state['values'];
+  // Process the HTML form to store configuration. The keyed array that
+  // we return will be serialized to the database.
+  $params = array(
+    'author-pattern' => $form_values['author-pattern'],
+    'everyone-pattern'   => $form_values['everyone-pattern'],
+  );
+  return $params;
+}
+
+/**
+ * Implementation of a configurable Drupal action.
+ * Tokenize and record an activity message.
+ *
+ * @param $object
+ * @param $context
+ *	 Holds ['hook'], ['op'], ['object'](node), ['author-pattern'],
+ *   ['everyone-pattern']
+ */
+function activity_record($object, $context) {
+  global $user;
+
+  // find what the type is so we can do the tokenizing
+  $module_info = module_invoke_all('activity_info');
+  foreach ($module_info as $module => $info) {
+    if (isset($context[$info->object_type])) {
+      $type = $info->object_type;
+    }
+  }
+
+  // tokenize
+  $author_message = token_replace($context['author-pattern'], $type, $context[$type]);
+  $everyone_message = token_replace($context['everyone-pattern'], $type, $context[$type]);
+
+  // create a record
+  $record = new stdClass();
+  $record->uid = $user->uid;
+  $record->op = $context['op'];
+  $record->type = $type;
+  $record->author_message = $author_message;
+  $record->everyone_message = $everyone_message;
+  drupal_write_record('activity_messages', $record);
+  
+  // set it so by default you can view ur own activity
+  $grants['activity'] = array($record->uid);
+    
+  // get the grants for this activity
+  foreach (module_implements('activity_grants') as $module) {
+    $grants[$module] = module_invoke($module, 'activity_grants', $record);
+  }
+  foreach ($grants as $module => $values) {
+    foreach ($values as $value) {
+      // TODO: really should build a big query here
+      $perm = new stdClass();
+      $perm->amid = $record->amid;
+      $perm->module = $module;
+      $perm->value = $value;
+      drupal_write_record('activity_access', $perm);
+    }
+  }
+}
+
+/**
+ * Injects a list of tokens into our form.
+ *
+ * @see activity_record_form().
+ * @return <type> Fieldset of tokens.
+ */
+function activity_tokens_inject() {
+  $form = array();
+  $modules = module_implements('activity_info');
+  foreach ($modules as $module) {
+    $form['token_settings'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Available tokens'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+    
+    // all tokens
+    $tokens = array();
+    $token_list = array();
+    foreach (token_get_list($module) as $name => $token_array) {
+      $token_list = array_merge($token_list, $token_array);
+    }
+    ksort($token_list);
+    foreach ($token_list as $token => $desc) {
+      $tokens[] = '['. $token .']: '. $desc;
+    }
+    $form['token_settings']['regular'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Regularly available tokens'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#description' => t('Available tokens') . theme('item_list', $tokens),
+    );
+
+    // activity tokens
+    $tokens = array();
+    $token_list = array();
+    foreach (token_get_list('activity') as $name => $token_array) {
+      $token_list = array_merge($token_list, $token_array);
+    }
+    ksort($token_list);
+    foreach ($token_list as $token => $desc) {
+      $tokens[] = '['. $token .']: '. $desc;
+    }
+    $form['token_settings']['activity'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Tokens available through activity'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#description' => t('Available tokens') . theme('item_list', $tokens),
+    );
+  }
+  return $form;
+}
+
+/**
+ * Our core includes define tokens, so we iterate over them to create a list of
+ * activity tokens.
+ * @see activity_token_iterate()
+ * @see activity_token_list()
+ * @see activity_token_values()
+ */
+
+/**
+ * Iterative function to get the list of tokens from our core includes.
+ */
+function activity_token_iterate($op, $arg1 = NULL, $arg2 = NULL) {
+  $modules = module_implements('activity_token_'. $op);
+  foreach ($modules as $module) {
+    static $results = array();
+    $function = $module .'_activity_token_'. $op;
+    if ($op == 'values') {
+      $results = array_merge((array)$results, (array)$function($module, $arg1, $arg2));
+    }
+    else {
+      $results = array_merge($results, $function($module));
+    }
+  }
+  return $results;
+}
+
+/**
+ * Token module integration. Defines available default tokens.
+ */
+function activity_token_list($type = 'all') {
+  return activity_token_iterate('list');
+}
+
+/**
+ * Token module integration. Defines available default tokens values.
+ */
+function activity_token_values($type, $data = NULL, $options = array()) {
+  return activity_token_iterate('values', $data, $options);
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function activity_init() {
+  $supported_core_modules = array('node', 'comment', 'user');
+  // load up our core include files which serve as templates as to how other
+  // modules should implement our hooks.
+  $activity_path = drupal_get_path('module', 'activity') .'/modules';
+  foreach ($supported_core_modules as $module) {
+    require_once($activity_path .'/'. $module .'.activity.inc');
+  }
+}
+
+/**
+ * Generates the WHERE part of an access query.
+ *
+ * @param string $access_table_alias
+ *   The table alias for the activity_access table.
+ * @param object $account
+ *   The user object for this query.
+ * @return string sql
+ *   String for the WHERE part of a query needing acces control
+ */
+function _activity_access_sql($access_table_alias, $account) {
+  // TODO: perm check, if the user is super awesome don't restrict access
+  
+  // allow them access to their activities
+  $grants['activity'] = array($account->uid);
+  
+  // go out and grab the grants
+  foreach (module_implements('activity_access_grants') as $module) {
+    $grants[$module] = module_invoke($module, 'activity_access_grants', $account);
+  }
+  
+  // construct the SQL
+  foreach ($grants as $module => $values) {
+    if (!empty($values)) {
+      foreach ($values as $key => $value) {
+        if ($account->activity_ignore[$module][$value]) {
+          unset($values[$key]);
+        }
+      }
+      $sql .= " OR ($access_table_alias.module = '$module' AND $access_table_alias.value IN (" . implode(',', $values) . "))";
+    }
+  }
+  
+  // remove the OR . Thats 4 characters
+  return substr($sql, 4);
+}
+
+/**
+ * Implementation of hook_db_rewrite_sql().
+ */
+function activity_db_rewrite_sql($query, $primary_table, $primary_field, $args) {
+  if ($primary_field == 'amid') {
+    $return['join'] = "INNER JOIN {activity_access} aa ON " . $primary_table . "." . $primary_field . " = aa.amid";
+    $return['where'] = _activity_access_sql("aa", $GLOBALS['user']);
+    $return['distinct'] = 1;
+    return $return;
+  }
+}
+
+/**
+ * Implementation of hook_views_api().
+ */
+function activity_views_api() {
+  return array(
+    'api' => 2.0,
+    'path' => drupal_get_path('module', 'activity') . '/views',
+  );
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function activity_theme($existing, $type, $theme, $path) {
+  return array(
+    'activity_username' => array(
+      'arguments' => array('account' => NULL),
+    ),
+  );
+}
+
+/**
+ * Theme function to return username.
+ */
+function theme_activity_username($account) {
+  return theme('username', $account);
+}

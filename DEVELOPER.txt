@@ -1,0 +1,76 @@
+ /\  __|_.  ._|_
+/~~\(_ | |\/| |\/
+               /
+Development specifications and integration
+==========================================
+ *for more details please see the handbook at http://drupal.org/node/328429
+
+_Hooks:
+
+hook_activity_info()
+  Register a module to work with Activity's hook_action_info() implementation.
+
+  Properties:
+    name        - the name of the module
+    object_type - the object type that is used in token replacement.
+                  @see activity_record(). This is needed because the $object
+                  parameter is not available, so we need a key name in order to
+                  reference the objct from within the $context parameter.
+    hooks       - a list of available hook that this action should operate upon.
+                  @see activity_action_info(). This allows other modules to
+                  extend the scope of what can be recorded by the activity
+                  action.
+
+  Return value:
+    A keyed object with the above properties.
+
+  Example:
+    @see any file with the activity/modules directory.
+
+hook_activity_grants($activity)
+  Provides a means to record what should have access to any particular message.
+
+  Parameters:
+    $activity - an object that holds a full activity record from the database.
+
+  Return value:
+    A list of ids to be stored into the access_table with the above properties.
+  
+  Example:
+    For instance, flag_friend returns a one element array of the creator of the 
+    activity. For OG, it would return all the groups that the node belongs in 
+    for instance.
+
+    /**
+     * Implementation of hook_activity_grants().
+     */
+    function flag_friend_activity_grants($activity) {
+      return array(
+        $activity->uid, // the module_id that will be used
+      );
+    }
+
+hook_activity_access_grants($account)
+  Proivde a means for other modules to determine who can have access to any
+  given activity message.
+
+  Parameters:
+    $account - the account of the message that we're determining access for.
+
+  Return value:
+    The Ids for the module that the user will have access too.
+
+  Example:
+    /**
+     * Implementation of hook_activity_access_grants().
+     */
+    function flag_friend_activity_access_grants($acccount) {
+      $friends = flag_friend_get_friends($account->uid);
+      $realm_ids = array();
+      if (!empty($friends)) {
+        foreach ($friends as $friend) {
+          $realm_ids[] = $friend;
+        }
+      }
+      return $realm_ids;
+    }

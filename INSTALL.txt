@@ -1,0 +1,54 @@
+ /\  __|_.  ._|_
+/~~\(_ | |\/| |\/
+               /
+Installation and basic configuration
+====================================
+ *for more details please see the handbook at http://drupal.org/node/328429
+
+_Installing:
+If you're reading this, you most likely have the module downloaded. Make sure it
+is in you {drupal_root}/modules/activity or more *highly recommended*
+{drupal_root}/sites/all/modules/contrib/activity.
+
+_Enabling:
+Go to {your_site}/admin/build/modules and enable Activity, and the Core Trigger
+modules.
+
+_Configuring your activity action:
+Go to {your_site}/admin/settings/actions, click the dropdown to "Make a new
+advanced action available" and choose "Record an activity". Click the "Create"
+button.
+
+Think about what kind of activity you would like to record and edit the
+"Description" field to reflect what the action is meant to do. For example, if
+you would like to record an activity every time someone updates a node, you
+might enter something like "Record a node update activity".
+
+Next you want to choose a format for your messages using the tokens that are
+available.
+
+The *Author message* is how the message is going to be formatted for the author
+of this particular activity. So corresponding to our previous example, you might
+enter something like "You updated [node-title-link]."
+
+The *Public message* is how the message is going to be formatter for everyone
+*other* than the author of this particular activity. So you would want to enter
+something like "[user-name-link] updated [node-title-link]."
+
+_Assigning your new activity action to a trigger:
+Go to {your_site}/admin/build/trigger/node, click the dropdown to "Choose an
+action" inside of "Trigger: After saving an updated post". Click the "Assign"
+button.
+
+_Conclusion:
+Now anytime an existing node is updated it will record an activity.
+
+_Displaying your activity:
+Display is done completely through Views 2, so make sure you have this module
+installed and enabled following the same proceedure you used to install and
+enable the Activity module.
+
+Activity ships with a default view, so as soon as you go to
+{your_site}/admin/build/views you will see a "Default Activity view: activity".
+This serves as a basic example of how you can display your activity and can be
+customized to suit your needs.

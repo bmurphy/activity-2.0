@@ -1,0 +1,85 @@
+<?php
+// $Id: $
+
+function activity_install() {
+  drupal_install_schema('activity');
+}
+
+function activity_schema() {
+  $schema['activity_messages'] = array(
+    'description' => 'Provides a place to record activity messages for display.',
+    'fields' => array(
+      'amid' => array(
+        'description' => 'The primary identifier for any activity messages.',
+        'type' => 'serial',
+        'not null' => TRUE,
+        'disp-width' => '11',
+      ),
+      'uid' => array(
+        'description' => 'The user id of whomever performed the activity being recorded.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'disp-width' => '11',
+      ),
+      'op' => array(
+        'description' => 'The operation being performed (update, insert, etc.)',
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'description' => 'The type of object being acted upon (node, user, etc.)',
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE,
+       ),
+      'author_message' => array(
+        'description' => 'The message for this activity that should be displayed to the author of it.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      ),
+      'everyone_message' => array(
+        'description' => 'The message for this activity that should be displayed to everyone other than the author.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      )
+    ),
+    'primary key' => array('amid'),
+  );
+  
+  $schema['activity_access'] = array(
+    'description' => 'Provides access control on a very granular level to activity items',
+    'fields' => array(
+      'amid' => array(
+        'description' => 'The primary identifier for an activity',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'module' => array(
+        'description' => 'The module providing the access control',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'value' => array(
+        'description' => 'The provided value from the implementing module. E.g a uid, nid or a tid',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'unsigned' => TRUE,
+      ),
+    ),
+    // UGG!!!
+    'primary key' => array('amid', 'module', 'value'),
+  );
+  return $schema;
+}
+
+function activity_uninstall() {
+  drupal_uninstall_schema('activity');
+
+  // @todo uninstall any actions we've created
+}
