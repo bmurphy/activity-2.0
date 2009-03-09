@@ -67,7 +67,6 @@ function activity_user_settings(&$form_state, $account) {
       );
     }
   }
-
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -105,7 +104,7 @@ function activity_user_settings_submit($form, &$form_state) {
  *
  * Other modules can provide the necessary hooks that they want to provide to
  * us. For instance, node.activity.inc will return array(
- * 'nodeapi' => array('presave', 'delete', 'insert', 'update', 'view')
+ *   'nodeapi' => array('presave', 'delete', 'insert', 'update', 'view')
  * );
  *
  * @see activity_record_form()
@@ -132,7 +131,7 @@ function activity_action_info() {
  * Present a configuration form for our action.
  *
  * @param array $context
- * Passed in from actions.
+ *   Passed in from actions.
  * @return array $form
  */
 function activity_record_form($context) {
@@ -141,7 +140,6 @@ function activity_record_form($context) {
   // Set default values for form.
   $context['author-pattern'] = (!isset($context['author-pattern'])) ? '' : $context['author-pattern'];
   $context['everyone-pattern'] = (!isset($context['everyone-pattern'])) ? '' : $context['everyone-pattern'];
-
   $form['token-help'] = array(
     '#type' => 'markup',
     '#value' => t('You can use tokens here like [node-link], [comment-link], and [user-name] or !help for a more comprehensive list of tokens.', array('!help' => l('see the detailed help page', 'admin/settings/activity/tokens', array('class' => 'popups')))),
@@ -187,8 +185,8 @@ function activity_record_submit($form, $form_state) {
  *
  * @param $object
  * @param $context
- *   Holds ['hook'], ['op'], ['object'](node), ['author-pattern'],
- * ['everyone-pattern']
+ *	 Holds ['hook'], ['op'], ['object'](node), ['author-pattern'],
+ *   ['everyone-pattern']
  */
 function activity_record($object, $context) {
   global $user;

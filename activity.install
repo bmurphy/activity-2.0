@@ -75,6 +75,7 @@ function activity_schema() {
     // UGG!!!
     'primary key' => array('amid', 'module', 'value'),
   );
+  
   return $schema;
 }
 

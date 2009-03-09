@@ -18,7 +18,7 @@ function activity_views_data() {
   
   // Database columns
   $data['activity_messages']['uid'] = array(
-    'title' => t('Activity Doer'),
+    'title' => t('Activity Actor'),
     'help' => t('The ID of the person who recorded the activity'),
     'argument' => array(
       'handler' => 'views_handler_argument_user_uid',
