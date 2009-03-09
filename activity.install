@@ -48,7 +48,7 @@ function activity_schema() {
     ),
     'primary key' => array('amid'),
   );
-  
+
   $schema['activity_access'] = array(
     'description' => 'Provides access control on a very granular level to activity items',
     'fields' => array(

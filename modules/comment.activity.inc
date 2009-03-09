@@ -24,23 +24,22 @@ function comment_activity_info() {
 function comment_activity_token_list($type = 'all') {
   if ($type == 'comment') {
     $tokens['comment'] = array(
-      'parent-id'			=> t('The Id of the parent'),
-      'parent-type'   => t('The type of parent (comment/node)'),
-      'parent-title'		=> t('The subject of the parent comment'),
-      'parent-link'			=> t('Link to the parent comment'),
-      'parent-author-uid' 	=> t('User Id of the person who authored the parent of this comment'),
-      'parent-author-name' 		=> t('Username of the person who authored the parent of this comment'),
-
-      'parent-node-id'  			=> t('The Id of the parent node'),
-      'parent-node-type' 			=> t('The type of the parent node'),
-      'parent-node-title'  			=> t('Title of the parent node'),
-      'parent-node-link'  			=> t('Link to the parent node'),
-      'parent-node-author-uid' 		=> t('User Id of the person who authored the parent node'),
-      'parent-node-author-name'		=> t('The username of the person who authored the parent node'),
-
       'comment-cid'					=> t('The Id of the comment'),
-      'comment-title' 			=> t('The subject of the comment'),
+      'comment-subject' 			=> t('The subject of the comment'),
       'comment-link'				=> t('Link to the comment'),
+      'parent-node-author-uid' 		=> t('User Id of the person who authored the parent node'),
+      'parent-node-author' 			=> t('Person who authored the parent node'),
+      'parent-node-author-name'		=> t('The username of the person who authored the parent node'),
+      'parent-node-id '  			=> t('The Id of the parent node'),
+      'parent-node-link'  			=> t('Link to the parent node'),
+      'parent-node-title'  			=> t('Title of the parent node'),
+      'parent-node-type' 			=> t('The type of the parent node'),
+      'parent-comment-author-uid' 	=> t('User Id of the person who authored the parent comment'),
+      'parent-comment-author' 		=> t('Person who authored the parent comment'),
+      'parent-comment-author-name' 	=> t('The username of the person who authored the parent comment'),
+      'parent-comment-cid'			=> t('The Id of the parent comment'),
+      'parent-comment-subject'		=> t('The subject of the parent comment'),
+      'parent-comment-link'			=> t('Link to the parent comment'),
     );
     return $tokens;
   }

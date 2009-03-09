@@ -36,8 +36,8 @@ function node_activity_token_list($type = 'all') {
  */
 function node_activity_token_values($type, $node = NULL, $options = array()) {
   if ($type == 'node' && !empty($node)) {
-    $data['node-link'] = l($node->title, 'node/'. $node->nid);
+    $data['node-link'] = l($node>title, 'node/'. $node->nid);
     $data['node-type'] = theme('activity_node_type', $node->type);
+    return $data;
   }
-  return $data;
 }
